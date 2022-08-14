@@ -9,24 +9,29 @@ import (
 	_ "github.com/lib/pq"
 )
 
-type PostgraesRepository struct {
+type PostgresRepository struct {
 	db *sql.DB
 }
 
-func NewPostgresRepository(url string) (*PostgraesRepository, error) {
-	db, err := sql.Open("postgres", url) //abrir repo y indicar db
+func NewPostgresRepository(url string) (*PostgresRepository, error) {
+	db, err := sql.Open("postgres", url)
 	if err != nil {
 		return nil, err
 	}
-	return &PostgraesRepository{db}, nil
+
+	return &PostgresRepository{db}, nil
 }
 
-func (repo *PostgraesRepository) InsertUser(ctx context.Context, user *models.User) error {
-	_, err := repo.db.ExecContext(ctx, "INSERT INTO users (email, password) VALUES ($1, $2)", user.Email, user.Password) //ejecutar una oracio de sql
+func (repo *PostgresRepository) Close() error {
+	return repo.db.Close()
+}
+
+func (repo *PostgresRepository) InsertUser(ctx context.Context, user *models.User) error {
+	_, err := repo.db.ExecContext(ctx, "INSERT INTO users (id, email, password) VALUES ($1, $2, $3)", user.Id, user.Email, user.Password) //ejecutar una oracio de sql
 	return err
 }
 
-func (repo *PostgraesRepository) GetUserById(ctx context.Context, id string) (*models.User, error) {
+func (repo *PostgresRepository) GetUserById(ctx context.Context, id string) (*models.User, error) {
 	rows, err := repo.db.QueryContext(ctx, "SELECT id, email FROM users WHERE id = $1", id)
 
 	defer func() {
@@ -48,8 +53,4 @@ func (repo *PostgraesRepository) GetUserById(ctx context.Context, id string) (*m
 	}
 
 	return &user, nil
-}
-
-func (repo *PostgraesRepository) CLose() error {
-	return repo.db.Close()
 }
