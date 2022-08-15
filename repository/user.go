@@ -8,13 +8,15 @@ import (
 type UserRepository interface {
 	InsertUser(ctx context.Context, user *models.User) error          //insertar
 	GetUserById(ctx context.Context, id string) (*models.User, error) //devolver un user y un error
+	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
 	Close() error
 }
 
 var implementacion UserRepository
 
-func SetRepository(repo UserRepository) {
-	implementacion = repo
+//set repository
+func SetRepository(repository UserRepository) {
+	implementacion = repository
 }
 
 //insertar nuevos usuarios
@@ -25,6 +27,10 @@ func InsertUser(ctx context.Context, user *models.User) error {
 //traer usuario conforme su id
 func GetUserById(ctx context.Context, id string) (*models.User, error) {
 	return implementacion.GetUserById(ctx, id)
+}
+
+func GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
+	return implementacion.GetUserByEmail(ctx, email)
 }
 
 func Close() error {
