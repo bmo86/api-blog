@@ -3,12 +3,13 @@ package handlres
 import (
 	"encoding/json"
 	"net/http"
+	"rest-websockets/means"
 	"rest-websockets/models"
 	"rest-websockets/repository"
 	"rest-websockets/server"
 	"time"
 
-	"github.com/golang-jwt/jwt"
+	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/segmentio/ksuid"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -33,34 +34,33 @@ type LoginResponse struct {
 
 func SingUpHandler(s server.Server) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var req = SingUpLoginRequest{}
-		err := json.NewDecoder(r.Body).Decode(&req)
+		var request = SingUpLoginRequest{}
+		err := json.NewDecoder(r.Body).Decode(&request)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest) // code 400
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		id, err := ksuid.NewRandom()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		hasdPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), HASH_CONST)
-
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(request.Password), HASH_CONST)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
-
-		id, err := ksuid.NewRandom()
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError) //code 500
 			return
 		}
 
 		var user = models.User{
-			Email:    req.Email,
-			Password: string(hasdPassword),
+			Email:    request.Email,
+			Password: string(hashedPassword),
 			Id:       id.String(),
 		}
 
 		err = repository.InsertUser(r.Context(), &user)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError) //code 500
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -68,6 +68,7 @@ func SingUpHandler(s server.Server) http.HandlerFunc {
 			Id:    user.Id,
 			Email: user.Email,
 		})
+
 	}
 }
 
@@ -83,7 +84,7 @@ func LoginHandler(s server.Server) http.HandlerFunc {
 		user, err := repository.GetUserByEmail(r.Context(), req.Email)
 
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, err.Error(), http.StatusInternalServerError) //code 500
 			return
 		}
 
@@ -105,7 +106,7 @@ func LoginHandler(s server.Server) http.HandlerFunc {
 
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
-		tockenString, err := token.SignedString([]byte(s.Config().JWTSecret))
+		tokenString, err := token.SignedString([]byte(s.Config().JWTSecret))
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -113,8 +114,33 @@ func LoginHandler(s server.Server) http.HandlerFunc {
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(LoginResponse{
-			Token: tockenString,
+			Token: tokenString,
 		})
 
+	}
+}
+
+func MeHandler(s server.Server) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		token, err := means.Token(s, w, r)
+
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+
+		if claims, ok := token.Claims.(*models.AppClaimas); ok && token.Valid {
+			user, err := repository.GetUserById(r.Context(), claims.UserId)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(user)
+		} else {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 	}
 }

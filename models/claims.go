@@ -1,6 +1,6 @@
 package models
 
-import "github.com/golang-jwt/jwt"
+import "github.com/golang-jwt/jwt/v4"
 
 type AppClaimas struct {
 	UserId string `json:"userId"`
