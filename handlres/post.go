@@ -8,6 +8,7 @@ import (
 	"rest-websockets/repository"
 	"rest-websockets/server"
 
+	"github.com/gorilla/mux"
 	"github.com/segmentio/ksuid"
 )
 
@@ -64,4 +65,27 @@ func InsertPostHandlres(s server.Server) http.HandlerFunc {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 	}
+}
+
+func GetPostByIdHandler(s server.Server) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// -> /post/{id}
+		params := mux.Vars(r) //estraer id
+
+		posts, err := repository.GetPostById(r.Context(), params["postId"])
+
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if len(posts.Id) <= 0 {
+			http.Error(w, "post not found "+err.Error(), http.StatusNotFound)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(posts)
+	}
+
 }
