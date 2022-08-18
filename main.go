@@ -8,6 +8,7 @@ import (
 	"rest-websockets/handlres"
 	"rest-websockets/middleware"
 	"rest-websockets/server"
+	"rest-websockets/websocket"
 
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
@@ -39,6 +40,8 @@ func main() {
 }
 
 func BindRoutes(s server.Server, r *mux.Router) {
+	hub := websocket.NewHub()
+
 	r.Use(middleware.CheckAuthMiddleware(s))
 	r.HandleFunc("/", handlres.HomeHandler(s)).Methods(http.MethodGet)
 	r.HandleFunc("/singup", handlres.SingUpHandler(s)).Methods(http.MethodPost)
@@ -49,4 +52,7 @@ func BindRoutes(s server.Server, r *mux.Router) {
 	r.HandleFunc("/posts/{postId}", handlres.UpdatePostHandler(s)).Methods(http.MethodPut)
 	r.HandleFunc("/posts/{postId}", handlres.DeletePostHandler(s)).Methods(http.MethodDelete)
 	r.HandleFunc("/posts", handlres.ListPostHandler(s)).Methods(http.MethodGet)
+
+	go hub.Run()
+	r.HandleFunc("/ws", hub.HandlersWebSocket)
 }
