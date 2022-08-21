@@ -7,6 +7,7 @@ import (
 	"net/http"
 	database "rest-websockets/database"
 	repository "rest-websockets/repository"
+	websocket "rest-websockets/websocket"
 
 	"github.com/gorilla/mux"
 )
@@ -19,15 +20,21 @@ type Config struct {
 
 type Server interface {
 	Config() *Config
+	Hub() *websocket.Hub
 }
 
 type Broker struct {
 	config *Config
 	router *mux.Router
+	hub    *websocket.Hub
 }
 
 func (b *Broker) Config() *Config {
 	return b.config
+}
+
+func (b *Broker) Hub() *websocket.Hub {
+	return b.hub
 }
 
 //ctx - encontrar posibles problemas en el codigo
@@ -48,6 +55,7 @@ func NewServer(ctx context.Context, config *Config) (*Broker, error) {
 	broker := &Broker{
 		config: config,
 		router: mux.NewRouter(),
+		hub:    websocket.NewHub(),
 	}
 
 	return broker, nil
@@ -62,6 +70,8 @@ func (b *Broker) Start(binder func(s Server, r *mux.Router)) {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	go b.Hub().Run()
 
 	repository.SetRepository(repo)
 

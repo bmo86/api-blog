@@ -1,6 +1,7 @@
 package websocket
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 	"sync"
@@ -77,4 +78,16 @@ func (hub *Hub) onDisconnects(client *Client) {
 	copy(hub.Clients[i:], hub.Clients[i+1:])
 	hub.Clients[len(hub.Clients)-1] = nil
 	hub.Clients = hub.Clients[:len(hub.Clients)-1]
+}
+
+func (hub *Hub) Broadcast(msg interface{}, ingnore *Client) {
+
+	data, _ := json.Marshal(msg)
+	for _, client := range hub.Clients {
+		if client != ingnore {
+			client.OutBound <- data
+		}
+
+	}
+
 }
