@@ -29,3 +29,7 @@ func (c *Client) Write() {
 		}
 	}
 }
+func (c Client) Close() {
+	c.Socket.Close()
+	close(c.OutBound)
+}

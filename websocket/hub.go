@@ -29,19 +29,6 @@ func NewHub() *Hub {
 	}
 }
 
-func (hub *Hub) HandlersWebSocket(w http.ResponseWriter, r *http.Request) {
-	socket, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Fatal(err)
-		http.Error(w, "Cloud not open websocket connection", http.StatusBadRequest)
-	}
-
-	client := NewClient(hub, socket)
-
-	hub.Register <- client
-	go client.Write()
-}
-
 func (hub *Hub) Run() {
 	for {
 		select {
@@ -51,6 +38,18 @@ func (hub *Hub) Run() {
 			hub.onDisconnects(c)
 		}
 	}
+}
+
+func (hub *Hub) Broadcast(msg interface{}, ingnore *Client) {
+
+	data, _ := json.Marshal(msg)
+	for _, client := range hub.Clients {
+		if client != ingnore {
+			client.OutBound <- data
+		}
+
+	}
+
 }
 
 func (hub *Hub) onConnect(client *Client) {
@@ -80,14 +79,18 @@ func (hub *Hub) onDisconnects(client *Client) {
 	hub.Clients = hub.Clients[:len(hub.Clients)-1]
 }
 
-func (hub *Hub) Broadcast(msg interface{}, ingnore *Client) {
 
-	data, _ := json.Marshal(msg)
-	for _, client := range hub.Clients {
-		if client != ingnore {
-			client.OutBound <- data
-		}
 
+func (hub *Hub) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
+	
+	socket, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "Error upgrading connection", http.StatusInternalServerError)
 	}
 
+	client := NewClient(hub, socket)
+	hub.Register <- client
+	
+	go client.Write()
 }

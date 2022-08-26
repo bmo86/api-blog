@@ -66,7 +66,6 @@ func InsertPostHandlres(s server.Server) http.HandlerFunc {
 			}
 
 			s.Hub().Broadcast(postMsg, nil)
-
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(PostResponse{
 				Id:          post.Id,
