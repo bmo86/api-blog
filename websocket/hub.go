@@ -63,7 +63,7 @@ func (hub *Hub) onConnect(client *Client) {
 
 func (hub *Hub) onDisconnects(client *Client) {
 	log.Println("Client Disconnect", client.Socket.RemoteAddr())
-	client.Socket.Close()
+	client.Close()
 	hub.Mutex.Lock()
 	defer hub.Mutex.Unlock()
 	i := -1
